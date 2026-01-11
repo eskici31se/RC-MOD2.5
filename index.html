@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Mining Pro - v28 UI Final Touch</title>
+    <style>
+        :root { --bg: #0b0b1a; --card: #16162d; --accent: #00f2ff; --danger: #ff4d4d; --edit: #f59e0b; --text: #e0e0e0; --success: #22c55e; --manual: #a855f7; }
+        
+        body, html { 
+            min-height: 100dvh; margin: 0; 
+            font-family: -apple-system, system-ui, sans-serif; 
+            background: var(--bg); color: var(--text); 
+            overflow-x: hidden; overflow-y: auto; 
+        }
+
+        .header-stats { 
+            position: sticky; top: 0; z-index: 100;
+            height: 65px; background: rgba(11, 11, 26, 0.98); 
+            display: flex; justify-content: space-around; align-items: center; 
+            border-bottom: 1px solid var(--accent);
+            padding-top: env(safe-area-inset-top);
+        }
+        .stat-box { text-align: center; }
+        .stat-label { font-size: 9px; color: #888; letter-spacing: 0.5px; }
+        .stat-val { font-size: 11px; font-weight: bold; color: var(--accent); }
+
+        .container { padding: 10px; padding-bottom: 40px; box-sizing: border-box; }
+
+        .top-panel { background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid #2d2d4d; margin-bottom: 10px; }
+        .mode-indicator { text-align: center; font-size: 10px; font-weight: bold; margin-bottom: 10px; padding: 5px; border-radius: 4px; }
+        
+        .strategy-bar { display: flex; gap: 6px; margin-bottom: 10px; }
+        .btn-strat { flex: 1; height: 42px; border-radius: 8px; border: none; font-size: 18px; cursor: pointer; color: white; opacity: 0.3; }
+        .btn-strat.active { opacity: 1; outline: 1px solid white; }
+        
+        input, select { 
+            width: 100%; padding: 10px; margin: 4px 0; 
+            border-radius: 6px; border: 1px solid #333; 
+            background: #050510; color: white; font-size: 14px; 
+            box-sizing: border-box;
+        }
+
+        #invWrapper { display: none; margin-top: 12px; border-top: 1px solid #333; padding-top: 12px; }
+        .inv-container { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
+        
+        /* Envanter yazı puntoları küçültüldü */
+        .inv-card { 
+            background: #1a1a35; padding: 6px 10px; border-radius: 6px; 
+            font-size: 10px; display: flex; justify-content: space-between; align-items: center;
+            border-left: 3px solid var(--accent);
+        }
+        .inv-card b { font-size: 11px; }
+
+        /* Oda navigasyonu genişletildi */
+        .room-nav { display: flex; gap: 4px; width: 100%; margin-bottom: 8px; }
+        .room-btn { 
+            flex: 1; /* Butonlar eşit genişlikte ekranı kaplar */
+            padding: 10px 0; text-align: center;
+            background: #242444; border-radius: 6px; 
+            font-size: 11px; border: 1px solid #333; color: #888; 
+            white-space: nowrap;
+        }
+        .room-btn.active { background: var(--accent); color: #000; font-weight: bold; border-color: var(--accent); }
+
+        .shelf { background: var(--card); border-radius: 10px; padding: 10px; margin-bottom: 12px; border: 1px solid #2d2d4d; }
+        .shelf-title { font-size: 11px; color: #fbbf24; margin-bottom: 6px; font-weight: 600; }
+        .floor { height: 38px; background: #08081a; margin: 3px 0; border-radius: 4px; display: flex; gap: 3px; padding: 2px; }
+        .slot { flex: 1; background: #25254d; border-radius: 3px; display: flex; flex-direction: column; justify-content: center; padding: 0 5px; border: 1px solid #3d3d5d; position: relative; overflow: hidden; }
+        .slot.double { flex: 2; border-color: var(--accent); }
+        .m-name-mini { font-size: 8px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .btn-remove-mini { position: absolute; right: 2px; color: var(--danger); background: none; border: none; font-size: 18px; }
+    </style>
+</head>
+<body>
+
+    <div class="header-stats">
+        <div class="stat-box"><span class="stat-label">HAM GÜÇ</span><br><span id="pPower" class="stat-val">-</span></div>
+        <div class="stat-box"><span class="stat-label">UNIQUE BONUS</span><br><span id="pBonus" class="stat-val">%0</span></div>
+        <div class="stat-box"><span class="stat-label">NET GÜÇ</span><br><span id="pFinal" class="stat-val">-</span></div>
+    </div>
+
+    <div class="container">
+        <div class="top-panel">
+            <div id="modeLabel" class="mode-indicator mode-manual" style="background: rgba(168, 85, 247, 0.15); color: var(--manual);">MANUEL YERLEŞTİRME</div>
+            <div class="strategy-bar">
+                <button id="btn-optimum" class="btn-strat" style="background:var(--success)" onclick="switchMode('optimum')">🚀</button>
+                <button id="btn-power" class="btn-strat" style="background:var(--edit)" onclick="switchMode('power')">💪</button>
+                <button id="btn-manual" class="btn-strat" style="background:var(--manual)" onclick="switchMode('manual')">✍️</button>
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <select id="selMiner" style="flex: 2;"></select>
+                <select id="selShelf" style="flex: 1;"></select>
+                <button onclick="place()" style="width: 45px; background:#5d3fd3; color:white; border:none; border-radius:8px; font-size: 20px;">+</button>
+                <button onclick="toggleInv()" style="width: 45px; background:#333; color:white; border:none; border-radius:8px; font-size: 18px;">📦</button>
+            </div>
+            
+            <div id="invWrapper">
+                <input type="text" id="searchBox" placeholder="Envanterde ara..." oninput="updateUI()" style="font-size: 11px; padding: 8px;">
+                <div id="invList" class="inv-container"></div>
+                
+                <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; border: 1px dashed #444;">
+                    <div style="font-size: 10px; color: var(--accent); margin-bottom: 5px; font-weight: bold; text-transform: uppercase;">Madenci Ekle</div>
+                    <input type="text" id="mName" placeholder="Madenci İsmi">
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" step="0.001" id="mPower" placeholder="Güç (TH)">
+                        <input type="number" step="0.001" id="mBonus" placeholder="Bonus %">
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" id="mCount" placeholder="Adet" value="1" style="flex: 1;">
+                        <select id="mType" style="flex: 1.5;"><option value="1">1 Hücreli (1H)</option><option value="2">2 Hücreli (2H)</option></select>
+                    </div>
+                    <button onclick="addInv()" style="width:100%; padding:12px; background:var(--accent); color:black; border:none; border-radius:8px; font-weight:bold; margin-top:8px; font-size: 13px;">ENVANTERE KAYDET</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="room-nav" id="roomNav"></div>
+        <div id="roomView"></div>
+    </div>
+
+<script>
+    let activeMode = 'manual';
+    let currentRoom = 0;
+    // v24 deposunu kullanmaya devam et
+    let inventory = JSON.parse(localStorage.getItem('m_v24_inv')) || [];
+    let roomSizes = [12, 18, 18, 18];
+    let facilities = JSON.parse(localStorage.getItem('m_v24_facs')) || { manual: emptyFac(), optimum: emptyFac(), power: emptyFac() };
+
+    function emptyFac() { return roomSizes.map(s => Array.from({length: s}, (_, i) => ({name: `Raf ${i+1}`, bonus: 0, floors: [[],[],[],[]]}))); }
+
+    function cleanB(v) {
+        if (!v) return "0";
+        return parseFloat(v.toFixed(3)).toString();
+    }
+
+    function switchMode(m) {
+        activeMode = m;
+        document.querySelectorAll('.btn-strat').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + m).classList.add('active');
+        const lb = document.getElementById('modeLabel');
+        lb.innerText = m.toUpperCase() + (m === 'manual' ? " YERLEŞTİRME" : " OTOMATİK MOD");
+        lb.style.background = m === 'optimum' ? "rgba(34,197,94,0.15)" : (m === 'power' ? "rgba(245,158,11,0.15)" : "rgba(168,85,247,0.15)");
+        lb.style.color = m === 'optimum' ? "var(--success)" : (m === 'power' ? "var(--edit)" : "var(--manual)");
+        if(m !== 'manual') runAuto(m);
+        render(); calculate(); updateUI();
+    }
+
+    function runAuto(type) {
+        let fac = facilities[type];
+        fac.forEach(r => r.forEach(s => s.floors = [[],[],[],[]]));
+        let pool = [];
+        inventory.forEach(item => {
+            for(let i=0; i<item.count; i++) pool.push({...item, instId: Math.random()});
+        });
+        pool.sort((a,b) => b.power - a.power);
+        let shelves = [];
+        fac.forEach((r, ri) => r.forEach((s, si) => shelves.push({ri, si, b: s.bonus})));
+        if(type === 'optimum') shelves.sort((a,b) => b.b - a.b);
+        for(let sh of shelves) {
+            let shelf = fac[sh.ri][sh.si];
+            for(let f=0; f<4; f++) {
+                let cap = 2;
+                for(let i=0; i<pool.length; i++) {
+                    if(pool[i].size <= cap) {
+                        shelf.floors[f].push(pool[i]);
+                        cap -= pool[i].size; pool.splice(i,1); i--;
+                        if(cap <= 0) break;
+                    }
+                }
+            }
+        }
+        save();
+    }
+
+    function updateUI() {
+        const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+        const filteredInv = inventory.filter(m => m.name.toLowerCase().includes(searchTerm));
+        document.getElementById('invList').innerHTML = filteredInv.map(m => `
+            <div class="inv-card">
+                <div><b>${m.name}</b> <small>(${m.count}x)</small><br>${formatP(m.power)} | %${cleanB(m.bonus)}</div>
+                <div style="display:flex; gap:12px;">
+                    <span onclick="editInv(${m.id})" style="color:var(--edit); font-size:15px;">✎</span>
+                    <span onclick="delInv(${m.id})" style="color:var(--danger); font-size:15px;">×</span>
+                </div>
+            </div>`).join('');
+        document.getElementById('selMiner').innerHTML = inventory.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+        document.getElementById('selShelf').innerHTML = facilities[activeMode][currentRoom].map((s,i) => `<option value="${i}">${s.name}</option>`).join('');
+        renderNav();
+    }
+
+    function formatP(v) {
+        if(!v || v === 0) return "0 TH";
+        const u = ["TH","PH","EH"]; let i=0;
+        while(v >= 1000 && i < u.length-1) { v /= 1000; i++; }
+        return v.toFixed(3).replace(/\.?0+$/, '') + " " + u[i];
+    }
+
+    function save() {
+        localStorage.setItem('m_v24_inv', JSON.stringify(inventory));
+        localStorage.setItem('m_v24_facs', JSON.stringify(facilities));
+    }
+
+    function calculate() {
+        let fac = facilities[activeMode];
+        let raw=0, net=0, bTotal=0; let names = new Set();
+        fac.forEach(r => r.forEach(s => s.floors.forEach(fl => fl.forEach(m => {
+            raw += m.power; if(!names.has(m.name.toLowerCase())) { bTotal += m.bonus; names.add(m.name.toLowerCase()); }
+        }))));
+        fac.forEach(r => r.forEach(s => {
+            let sr=0; s.floors.forEach(fl => fl.forEach(m => sr += m.power));
+            net += sr * (1 + (bTotal/100) + (s.bonus/100));
+        }));
+        document.getElementById('pPower').innerText = formatP(raw);
+        document.getElementById('pBonus').innerText = "%" + cleanB(bTotal);
+        document.getElementById('pFinal').innerText = formatP(net);
+    }
+
+    function addInv() {
+        const n = document.getElementById('mName').value;
+        const p = parseFloat(document.getElementById('mPower').value);
+        const b = parseFloat(document.getElementById('mBonus').value) || 0;
+        const c = parseInt(document.getElementById('mCount').value) || 1;
+        const t = parseInt(document.getElementById('mType').value);
+        if(!n || isNaN(p)) return;
+        inventory.push({ id: Date.now(), name: n, power: p, bonus: b, count: c, size: t });
+        save(); updateUI();
+    }
+
+    function editInv(id) {
+        const m = inventory.find(x => x.id === id); if(!m) return;
+        const nN = prompt("İsim:", m.name);
+        const nP = prompt("Güç (TH):", m.power);
+        const nB = prompt("Bonus (%):", m.bonus);
+        const nC = prompt("Adet:", m.count);
+        if(nN) m.name = nN; if(nP) m.power = parseFloat(nP);
+        if(nB) m.bonus = parseFloat(nB); if(nC) m.count = parseInt(nC);
+        save(); updateUI(); render(); calculate();
+    }
+
+    function delInv(id) {
+        if(!confirm("Silinsin mi?")) return;
+        inventory = inventory.filter(x => x.id !== id);
+        Object.values(facilities).forEach(f => f.forEach(r => r.forEach(s => s.floors.forEach((fl, idx) => {
+            s.floors[idx] = fl.filter(m => m.id !== id);
+        }))));
+        save(); updateUI(); render(); calculate();
+    }
+
+    function place() {
+        if(activeMode !== 'manual') return alert("Otomatik modda ekleme yapılamaz.");
+        const s = document.getElementById('selShelf').value;
+        const m = inventory.find(x => x.id == document.getElementById('selMiner').value);
+        if(!m) return;
+        let fac = facilities.manual[currentRoom][s];
+        for(let f=0; f<4; f++) {
+            let u = fac.floors[f].reduce((a,b) => a+b.size, 0);
+            if(u + m.size <= 2) { fac.floors[f].push({...m, instId: Math.random()}); save(); render(); calculate(); return; }
+        }
+        alert("Raf dolu!");
+    }
+
+    function render() {
+        const v = document.getElementById('roomView'); v.innerHTML = "";
+        facilities[activeMode][currentRoom].forEach((sh, si) => {
+            let h = `<div class="shelf"><div class="shelf-title"><span onclick="edSh(${si})">${sh.name} (%${cleanB(sh.bonus)})</span></div>`;
+            sh.floors.forEach((fl, fi) => {
+                h += `<div class="floor">`;
+                let u=0; fl.forEach(m => {
+                    u += m.size;
+                    h += `<div class="slot ${m.size==2?'double':''}">
+                        <span class="m-name-mini">${m.name}</span>
+                        <button class="btn-remove-mini" onclick="remM(${si},${fi},${m.instId})">×</button>
+                    </div>`;
+                });
+                for(let i=0; i<2-u; i++) h += `<div class="slot" style="opacity:0.1; border:1px dashed #444"></div>`;
+                h += `</div>`;
+            });
+            v.innerHTML += h + `</div>`;
+        });
+    }
+
+    function edSh(i) {
+        const n = prompt("Raf Adı:", facilities[activeMode][currentRoom][i].name);
+        const b = prompt("Raf Bonusu:", facilities[activeMode][currentRoom][i].bonus);
+        if(n) facilities[activeMode][currentRoom][i].name = n;
+        if(b) facilities[activeMode][currentRoom][i].bonus = parseFloat(b);
+        save(); render(); calculate();
+    }
+
+    function remM(si, fi, id) {
+        if(activeMode !== 'manual') return;
+        facilities.manual[currentRoom][si].floors[fi] = facilities.manual[currentRoom][si].floors[fi].filter(x => x.instId !== id);
+        save(); render(); calculate();
+    }
+
+    function renderNav() { document.getElementById('roomNav').innerHTML = roomSizes.map((_, i) => `<div class="room-btn ${currentRoom==i?'active':''}" onclick="setRoom(${i})">ODA ${i+1}</div>`).join(''); }
+    function setRoom(i) { currentRoom = i; updateUI(); render(); }
+    function toggleInv() { 
+        const w = document.getElementById('invWrapper'); 
+        w.style.display = w.style.display === 'block' ? 'none' : 'block'; 
+    }
+
+    switchMode('manual');
+</script>
+</body>
+</html>
